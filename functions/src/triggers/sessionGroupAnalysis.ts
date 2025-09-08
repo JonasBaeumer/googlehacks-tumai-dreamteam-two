@@ -127,6 +127,8 @@ async function analyzeSessionGroup(sessionGroupData: Record<string, unknown>): P
   const totalDuration = sessionGroupData.total_duration as number || 0;
   const sessionCount = sessionGroupData.session_count as number || 0;
   const sites = sessionGroupData.sites as string[] || [];
+  const paths = sessionGroupData.paths as string[] || [];
+  const titles = sessionGroupData.titles as string[] || [];
   const startTime = sessionGroupData.start_time as string;
   const endTime = sessionGroupData.end_time as string;
   
@@ -135,8 +137,8 @@ async function analyzeSessionGroup(sessionGroupData: Record<string, unknown>): P
   const uniqueSites = [...new Set(sites)].length;
   const durationMinutes = Math.round(totalDuration / 60000); // Convert to minutes
   
-  // Determine session type based on sites
-  const sessionType = determineSessionType(sites);
+  // Determine session type based on sites, paths, and titles
+  const sessionType = determineSessionType(sites, paths, titles);
   
   // Calculate productivity score (0-100)
   const productivityScore = calculateProductivityScore({
@@ -166,6 +168,8 @@ async function analyzeSessionGroup(sessionGroupData: Record<string, unknown>): P
       productivityScore,
       sessionType,
       sites: sites,
+      paths: paths,
+      titles: titles,
       startTime,
       endTime
     },
@@ -179,21 +183,30 @@ async function analyzeSessionGroup(sessionGroupData: Record<string, unknown>): P
 }
 
 /**
- * Determines the type of coding session based on sites visited
+ * Determines the type of coding session based on sites, paths, and titles
  * @param {string[]} sites Array of site domains
+ * @param {string[]} paths Array of page paths
+ * @param {string[]} titles Array of page titles
  * @return {string} Session type
  */
-function determineSessionType(sites: string[]): string {
+function determineSessionType(sites: string[], paths: string[], titles: string[]): string {
   const uniqueSites = [...new Set(sites)];
+  const allPaths = paths.join(' ').toLowerCase();
+  const allTitles = titles.join(' ').toLowerCase();
   
-  if (uniqueSites.includes('leetcode.com')) {
+  // Check for specific coding activities based on paths and titles
+  if (allPaths.includes('/problems/') || allTitles.includes('leetcode') || uniqueSites.includes('leetcode.com')) {
     return 'algorithm_practice';
-  } else if (uniqueSites.includes('github.com')) {
+  } else if (allPaths.includes('/pull/') || allPaths.includes('/commit/') || allTitles.includes('pull request') || uniqueSites.includes('github.com')) {
     return 'code_review';
-  } else if (uniqueSites.includes('stackoverflow.com')) {
+  } else if (allTitles.includes('stack overflow') || allTitles.includes('error') || allTitles.includes('problem') || uniqueSites.includes('stackoverflow.com')) {
     return 'problem_solving';
-  } else if (uniqueSites.includes('docs.') || uniqueSites.some(site => site.includes('documentation'))) {
+  } else if (allPaths.includes('/docs/') || allTitles.includes('documentation') || allTitles.includes('api') || allTitles.includes('guide')) {
     return 'learning';
+  } else if (allPaths.includes('/issues/') || allTitles.includes('issue') || allTitles.includes('bug')) {
+    return 'bug_fixing';
+  } else if (allPaths.includes('/blob/') || allPaths.includes('/tree/') || allTitles.includes('source code') || allTitles.includes('repository')) {
+    return 'code_exploration';
   } else if (uniqueSites.length === 1) {
     return 'focused_coding';
   } else {
@@ -240,6 +253,8 @@ function calculateProductivityScore(metrics: {
     'learning': 8,
     'code_review': 7,
     'problem_solving': 6,
+    'bug_fixing': 8,
+    'code_exploration': 7,
     'mixed_activity': 3
   };
   

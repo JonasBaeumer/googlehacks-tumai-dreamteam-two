@@ -147,6 +147,8 @@ async function updateSessionGroupStats(db: Firestore, uid: string,
     end_time: activityData.ts_end,
     total_duration: activityData.session_group_duration || 0,
     sites: activityData.session_group_sites || [],
+    paths: activityData.session_group_paths || [],
+    titles: activityData.session_group_titles || [],
     session_count: activityData.session_group_position || 1,
     last_updated: new Date().toISOString(),
   };

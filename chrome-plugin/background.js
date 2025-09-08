@@ -142,6 +142,9 @@ function startSession(tabId, tab) {
   // Add site to session group
   addSiteToSessionGroup(url.hostname);
   
+  // Add path and title to session group
+  addPathAndTitleToSessionGroup(session.path, session.title);
+  
   console.log("Started session for:", tab.url, "Group:", ACTIVE_SESSION_GROUP);
 }
 
@@ -198,6 +201,8 @@ function tickActive() {
 function serializeSession(session, reason) {
   const group = SESSION_GROUPS.get(session.sessionGroupId);
   const groupSites = group ? group.sites : [];
+  const groupPaths = group ? group.paths : [];
+  const groupTitles = group ? group.titles : [];
   const groupDuration = group ? group.totalDuration : 0;
   
   return {
@@ -213,6 +218,8 @@ function serializeSession(session, reason) {
     session_group_id: session.sessionGroupId,
     session_group_duration: groupDuration,
     session_group_sites: groupSites,
+    session_group_paths: groupPaths,
+    session_group_titles: groupTitles,
     session_group_position: group ? group.sessionCount + 1 : 1
   };
 }
@@ -324,6 +331,8 @@ function startNewSessionGroup() {
     start: Date.now(),
     lastActivity: Date.now(),
     sites: [],
+    paths: [],
+    titles: [],
     totalDuration: 0,
     sessionCount: 0
   });
@@ -404,6 +413,27 @@ function addSiteToSessionGroup(domain) {
   if (group && !group.sites.includes(domain)) {
     group.sites.push(domain);
     console.log("Added site to session group:", domain, "Sites:", group.sites);
+  }
+}
+
+function addPathAndTitleToSessionGroup(path, title) {
+  if (!ACTIVE_SESSION_GROUP) return;
+  
+  const group = SESSION_GROUPS.get(ACTIVE_SESSION_GROUP);
+  if (group) {
+    // Add path if not already present
+    if (!group.paths.includes(path)) {
+      group.paths.push(path);
+    }
+    
+    // Add title if not already present
+    if (!group.titles.includes(title)) {
+      group.titles.push(title);
+    }
+    
+    console.log("Added path and title to session group:", path, title);
+    console.log("Session group paths:", group.paths);
+    console.log("Session group titles:", group.titles);
   }
 }
 
@@ -509,12 +539,15 @@ async function handleTestDatabase(sendResponse) {
       domain: "test.com",
       url: "https://test.com/test-page",
       title: "Test Page - Database Connection Test",
+      path: "/test-page",
       ts_start: new Date(Date.now() - 10000).toISOString(), // 10 seconds ago
       ts_end: new Date().toISOString(),
       session_group_id: "test-group-" + Date.now(),
       session_group_position: 1,
       session_group_duration: 10000,
-      session_group_sites: ["test.com"]
+      session_group_sites: ["test.com"],
+      session_group_paths: ["/test-page"],
+      session_group_titles: ["Test Page - Database Connection Test"]
     };
     
     console.log("Sending test data:", testData);
