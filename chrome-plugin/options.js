@@ -125,6 +125,41 @@ function setupEventListeners() {
       }
     }
   });
+
+  // Pair extension
+  document.getElementById('pairExtension').addEventListener('click', async () => {
+    const pairingCode = document.getElementById('pairingCode').value.trim().toUpperCase();
+    const statusDiv = document.getElementById('pairingStatus');
+    
+    if (!pairingCode || pairingCode.length !== 6) {
+      statusDiv.textContent = 'Please enter a valid 6-character pairing code';
+      statusDiv.className = 'status error';
+      return;
+    }
+
+    try {
+      statusDiv.textContent = 'Connecting...';
+      statusDiv.className = 'status';
+      
+      // Send pairing request to background script
+      const response = await chrome.runtime.sendMessage({ 
+        type: 'pairWithCode', 
+        code: pairingCode 
+      });
+      
+      if (response.success) {
+        statusDiv.textContent = '✅ Extension connected successfully!';
+        statusDiv.className = 'status success';
+        document.getElementById('pairingCode').value = '';
+      } else {
+        throw new Error(response.error || 'Pairing failed');
+      }
+      
+    } catch (error) {
+      statusDiv.textContent = `❌ Connection failed: ${error.message}`;
+      statusDiv.className = 'status error';
+    }
+  });
 }
 
 function showStatus(message, type) {
