@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 300px;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .stats {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .stat-value {
+      font-weight: bold;
+      color: #007bff;
+    }
+    .current-site {
+      background: #e3f2fd;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+    .site-title {
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+    .site-url {
+      font-size: 12px;
+      color: #666;
+      word-break: break-all;
+    }
+    .status {
+      text-align: center;
+      padding: 8px;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .status.tracking {
+      background: #d4edda;
+      color: #155724;
+    }
+    .status.idle {
+      background: #fff3cd;
+      color: #856404;
+    }
+    .button {
+      width: 100%;
+      padding: 8px;
+      border: none;
+      border-radius: 4px;
+      background: #007bff;
+      color: white;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    .button:hover {
+      background: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2>🔥 CodeStreak</h2>
+    <p>Track your coding activity</p>
+  </div>
+  
+  <div class="stats">
+    <div class="stat-item">
+      <span>Today's Coding Time:</span>
+      <span class="stat-value" id="todayTime">0 min</span>
+    </div>
+    <div class="stat-item">
+      <span>Current Streak:</span>
+      <span class="stat-value" id="streak">0 days</span>
+    </div>
+    <div class="stat-item">
+      <span>Total Sessions:</span>
+      <span class="stat-value" id="sessions">0</span>
+    </div>
+  </div>
+  
+  <div class="current-site" id="currentSite">
+    <div class="site-title" id="siteTitle">Loading...</div>
+    <div class="site-url" id="siteUrl">-</div>
+  </div>
+  
+  <div class="status tracking" id="status">
+    🟢 Tracking activity
+  </div>
+  
+  <button class="button" id="viewDashboard">View Dashboard</button>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
