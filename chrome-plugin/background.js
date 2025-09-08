@@ -142,8 +142,8 @@ function startSession(tabId, tab) {
   // Add site to session group
   addSiteToSessionGroup(url.hostname);
   
-  // Add path and title to session group
-  addPathAndTitleToSessionGroup(session.path, session.title);
+  // Add full URL and title to session group
+  addPathAndTitleToSessionGroup(session.url, session.title);
   
   console.log("Started session for:", tab.url, "Group:", ACTIVE_SESSION_GROUP);
 }
@@ -416,14 +416,14 @@ function addSiteToSessionGroup(domain) {
   }
 }
 
-function addPathAndTitleToSessionGroup(path, title) {
+function addPathAndTitleToSessionGroup(url, title) {
   if (!ACTIVE_SESSION_GROUP) return;
   
   const group = SESSION_GROUPS.get(ACTIVE_SESSION_GROUP);
   if (group) {
-    // Add path if not already present
-    if (!group.paths.includes(path)) {
-      group.paths.push(path);
+    // Add full URL if not already present
+    if (!group.paths.includes(url)) {
+      group.paths.push(url);
     }
     
     // Add title if not already present
@@ -431,8 +431,8 @@ function addPathAndTitleToSessionGroup(path, title) {
       group.titles.push(title);
     }
     
-    console.log("Added path and title to session group:", path, title);
-    console.log("Session group paths:", group.paths);
+    console.log("Added URL and title to session group:", url, title);
+    console.log("Session group URLs:", group.paths);
     console.log("Session group titles:", group.titles);
   }
 }
@@ -546,7 +546,7 @@ async function handleTestDatabase(sendResponse) {
       session_group_position: 1,
       session_group_duration: 10000,
       session_group_sites: ["test.com"],
-      session_group_paths: ["/test-page"],
+      session_group_paths: ["https://test.com/test-page"],
       session_group_titles: ["Test Page - Database Connection Test"]
     };
     

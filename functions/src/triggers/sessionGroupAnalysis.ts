@@ -137,7 +137,7 @@ async function analyzeSessionGroup(sessionGroupData: Record<string, unknown>): P
   const uniqueSites = [...new Set(sites)].length;
   const durationMinutes = Math.round(totalDuration / 60000); // Convert to minutes
   
-  // Determine session type based on sites, paths, and titles
+  // Determine session type based on sites, URLs, and titles
   const sessionType = determineSessionType(sites, paths, titles);
   
   // Calculate productivity score (0-100)
@@ -183,29 +183,29 @@ async function analyzeSessionGroup(sessionGroupData: Record<string, unknown>): P
 }
 
 /**
- * Determines the type of coding session based on sites, paths, and titles
+ * Determines the type of coding session based on sites, URLs, and titles
  * @param {string[]} sites Array of site domains
- * @param {string[]} paths Array of page paths
+ * @param {string[]} urls Array of full page URLs
  * @param {string[]} titles Array of page titles
  * @return {string} Session type
  */
-function determineSessionType(sites: string[], paths: string[], titles: string[]): string {
+function determineSessionType(sites: string[], urls: string[], titles: string[]): string {
   const uniqueSites = [...new Set(sites)];
-  const allPaths = paths.join(' ').toLowerCase();
+  const allUrls = urls.join(' ').toLowerCase();
   const allTitles = titles.join(' ').toLowerCase();
   
-  // Check for specific coding activities based on paths and titles
-  if (allPaths.includes('/problems/') || allTitles.includes('leetcode') || uniqueSites.includes('leetcode.com')) {
+  // Check for specific coding activities based on URLs and titles
+  if (allUrls.includes('leetcode.com/problems/') || allTitles.includes('leetcode') || uniqueSites.includes('leetcode.com')) {
     return 'algorithm_practice';
-  } else if (allPaths.includes('/pull/') || allPaths.includes('/commit/') || allTitles.includes('pull request') || uniqueSites.includes('github.com')) {
+  } else if (allUrls.includes('github.com') && (allUrls.includes('/pull/') || allUrls.includes('/commit/')) || allTitles.includes('pull request') || uniqueSites.includes('github.com')) {
     return 'code_review';
   } else if (allTitles.includes('stack overflow') || allTitles.includes('error') || allTitles.includes('problem') || uniqueSites.includes('stackoverflow.com')) {
     return 'problem_solving';
-  } else if (allPaths.includes('/docs/') || allTitles.includes('documentation') || allTitles.includes('api') || allTitles.includes('guide')) {
+  } else if (allUrls.includes('/docs/') || allTitles.includes('documentation') || allTitles.includes('api') || allTitles.includes('guide')) {
     return 'learning';
-  } else if (allPaths.includes('/issues/') || allTitles.includes('issue') || allTitles.includes('bug')) {
+  } else if (allUrls.includes('/issues/') || allTitles.includes('issue') || allTitles.includes('bug')) {
     return 'bug_fixing';
-  } else if (allPaths.includes('/blob/') || allPaths.includes('/tree/') || allTitles.includes('source code') || allTitles.includes('repository')) {
+  } else if (allUrls.includes('/blob/') || allUrls.includes('/tree/') || allTitles.includes('source code') || allTitles.includes('repository')) {
     return 'code_exploration';
   } else if (uniqueSites.length === 1) {
     return 'focused_coding';
