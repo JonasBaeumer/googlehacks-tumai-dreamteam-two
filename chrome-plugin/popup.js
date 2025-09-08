@@ -2,14 +2,57 @@
 // Shows current stats and activity status
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // Set default auth status first
+  const authElement = document.getElementById('authStatus');
+  authElement.textContent = '⏳ Initializing...';
+  authElement.className = 'auth-status guest';
+  
   await updateStats();
   await updateCurrentSite();
   await updateStatus();
+  await updateAuthStatus();
   
   // Set up event listeners
   document.getElementById('viewDashboard').addEventListener('click', () => {
     // For now, just open a placeholder page
     chrome.tabs.create({ url: 'https://github.com' });
+  });
+  
+  // Auth button event listeners
+  document.getElementById('signInAnonymously').addEventListener('click', async () => {
+    try {
+      const response = await chrome.runtime.sendMessage({ type: 'signInAnonymously' });
+      if (response.success) {
+        console.log('Anonymous sign-in successful');
+        await updateAuthStatus();
+      } else {
+        console.error('Anonymous sign-in failed:', response.error);
+      }
+    } catch (error) {
+      console.error('Anonymous sign-in failed:', error);
+    }
+  });
+  
+  document.getElementById('pairWithCode').addEventListener('click', () => {
+    // Open options page for pairing
+    chrome.runtime.openOptionsPage();
+  });
+  
+  document.getElementById('testDatabase').addEventListener('click', async () => {
+    try {
+      console.log('Testing database connection...');
+      const response = await chrome.runtime.sendMessage({ type: 'testDatabase' });
+      if (response.success) {
+        console.log('✅ Test entry created successfully:', response.sessionId);
+        alert('✅ Test entry created successfully!\nSession ID: ' + response.sessionId);
+      } else {
+        console.error('❌ Test failed:', response.error);
+        alert('❌ Test failed: ' + response.error);
+      }
+    } catch (error) {
+      console.error('❌ Test failed:', error);
+      alert('❌ Test failed: ' + error.message);
+    }
   });
   
   // Refresh stats every 5 seconds
@@ -139,6 +182,40 @@ function formatMinutes(ms) {
   if (minutes < 1) return '< 1 min';
   if (minutes === 1) return '1 min';
   return minutes + ' min';
+}
+
+async function updateAuthStatus() {
+  try {
+    const authElement = document.getElementById('authStatus');
+    const authButtons = document.getElementById('authButtons');
+    
+    // Get auth status from background script
+    const authStatus = await chrome.runtime.sendMessage({ type: 'getAuthStatus' });
+    console.log('Auth status from background:', authStatus);
+    
+    if (authStatus && authStatus.isAuthenticated) {
+      if (authStatus.isAnonymous) {
+        authElement.textContent = '👤 Guest Mode';
+        authElement.className = 'auth-status guest';
+      } else {
+        authElement.textContent = '✅ Connected';
+        authElement.className = 'auth-status connected';
+      }
+      authButtons.style.display = 'none';
+    } else {
+      authElement.textContent = '⏳ Ready for Backend';
+      authElement.className = 'auth-status guest';
+      authButtons.style.display = 'block';
+    }
+  } catch (error) {
+    console.error('Error updating auth status:', error);
+    // Fallback to default status
+    const authElement = document.getElementById('authStatus');
+    const authButtons = document.getElementById('authButtons');
+    authElement.textContent = '⏳ Ready for Backend';
+    authElement.className = 'auth-status guest';
+    authButtons.style.display = 'block';
+  }
 }
 
 // Listen for messages from background script

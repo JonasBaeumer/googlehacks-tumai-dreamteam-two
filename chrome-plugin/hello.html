@@ -70,6 +70,25 @@
     .button:hover {
       background: #0056b3;
     }
+    .auth-status {
+      text-align: center;
+      padding: 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+    .auth-status.guest {
+      background: #fff3cd;
+      color: #856404;
+    }
+    .auth-status.connected {
+      background: #d4edda;
+      color: #155724;
+    }
+    .auth-status.disconnected {
+      background: #f8d7da;
+      color: #721c24;
+    }
   </style>
 </head>
 <body>
@@ -98,12 +117,24 @@
     <div class="site-url" id="siteUrl">-</div>
   </div>
   
+  <div class="auth-status guest" id="authStatus">
+    ⏳ Ready for Backend
+  </div>
+  
   <div class="status tracking" id="status">
     🟢 Tracking activity
   </div>
   
+  <div id="authButtons" style="display: none;">
+    <button class="button" id="signInAnonymously" style="margin-bottom: 8px;">👤 Start as Guest</button>
+    <button class="button" id="pairWithCode" style="background: #28a745;">🔗 Connect Account</button>
+  </div>
+  
   <button class="button" id="viewDashboard">View Dashboard</button>
   
+  <button class="button" id="testDatabase" style="background: #ff6b35; margin-top: 8px;">🧪 Test Database</button>
+  
+  <!-- Extension Scripts -->
   <script src="popup.js"></script>
 </body>
 </html>
