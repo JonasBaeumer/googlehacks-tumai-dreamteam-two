@@ -89,6 +89,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     // Handle test database entry
     handleTestDatabase(sendResponse);
     return true; // Keep message channel open for async response
+  } else if (msg.type === "endCurrentSession") {
+    // Handle manual session ending
+    handleEndCurrentSession(sendResponse);
+    return true; // Keep message channel open for async response
+  } else if (msg.type === "getCurrentSessionInfo") {
+    // Handle getting current session info
+    handleGetCurrentSessionInfo(sendResponse);
+    return true; // Keep message channel open for async response
   }
 });
 
@@ -533,6 +541,77 @@ async function handleTestDatabase(sendResponse) {
   } catch (error) {
     console.error("Test database entry failed:", error);
     sendResponse({ success: false, error: error.message });
+  }
+}
+
+async function handleEndCurrentSession(sendResponse) {
+  try {
+    console.log("Manually ending current session...");
+    
+    // Get the current active tab
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab) {
+      throw new Error("No active tab found");
+    }
+    
+    // Check if there's an active session for this tab
+    const session = SESSIONS.get(tab.id);
+    if (!session) {
+      throw new Error("No active session found for current tab");
+    }
+    
+    // End the session manually
+    endSession(tab.id, "manual_end");
+    
+    const message = `Session ended manually. Active time: ${Math.round(session.activeMs / 1000)}s on ${session.domain}`;
+    console.log(message);
+    
+    sendResponse({ 
+      success: true, 
+      message: message,
+      sessionData: {
+        domain: session.domain,
+        activeMs: session.activeMs,
+        duration: Math.round(session.activeMs / 1000) + 's'
+      }
+    });
+    
+  } catch (error) {
+    console.error("Failed to end current session:", error);
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+async function handleGetCurrentSessionInfo(sendResponse) {
+  try {
+    // Get the current active tab
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab) {
+      sendResponse({ hasActiveSession: false });
+      return;
+    }
+    
+    // Check if there's an active session for this tab
+    const session = SESSIONS.get(tab.id);
+    if (!session) {
+      sendResponse({ hasActiveSession: false });
+      return;
+    }
+    
+    sendResponse({
+      hasActiveSession: true,
+      activeMs: session.activeMs,
+      domain: session.domain,
+      url: session.url,
+      title: session.title,
+      sessionGroupId: session.sessionGroupId,
+      startTime: session.start,
+      lastActivity: session.lastActivity
+    });
+    
+  } catch (error) {
+    console.error("Failed to get current session info:", error);
+    sendResponse({ hasActiveSession: false, error: error.message });
   }
 }
 

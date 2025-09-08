@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await updateCurrentSite();
   await updateStatus();
   await updateAuthStatus();
+  await updateSessionInfo();
   
   // Set up event listeners
   document.getElementById('viewDashboard').addEventListener('click', () => {
@@ -55,8 +56,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
   
+  document.getElementById('endCurrentSession').addEventListener('click', async () => {
+    try {
+      console.log('Manually ending current session...');
+      const response = await chrome.runtime.sendMessage({ type: 'endCurrentSession' });
+      if (response.success) {
+        console.log('✅ Session ended successfully:', response.message);
+        alert('✅ Session ended successfully!\n' + response.message);
+        // Refresh the UI to show updated status
+        await updateCurrentSite();
+        await updateStatus();
+        await updateSessionInfo();
+      } else {
+        console.error('❌ Failed to end session:', response.error);
+        alert('❌ Failed to end session: ' + response.error);
+      }
+    } catch (error) {
+      console.error('❌ Failed to end session:', error);
+      alert('❌ Failed to end session: ' + error.message);
+    }
+  });
+  
   // Refresh stats every 5 seconds
-  setInterval(updateStats, 5000);
+  setInterval(async () => {
+    await updateStats();
+    await updateSessionInfo();
+  }, 5000);
 });
 
 async function updateStats() {
@@ -215,6 +240,32 @@ async function updateAuthStatus() {
     authElement.textContent = '⏳ Ready for Backend';
     authElement.className = 'auth-status guest';
     authButtons.style.display = 'block';
+  }
+}
+
+async function updateSessionInfo() {
+  try {
+    const endSessionButton = document.getElementById('endCurrentSession');
+    
+    // Get current session info from background script
+    const sessionInfo = await chrome.runtime.sendMessage({ type: 'getCurrentSessionInfo' });
+    
+    if (sessionInfo && sessionInfo.hasActiveSession) {
+      const duration = Math.round(sessionInfo.activeMs / 1000);
+      endSessionButton.textContent = `⏹️ End Session (${duration}s)`;
+      endSessionButton.disabled = false;
+      endSessionButton.style.opacity = '1';
+    } else {
+      endSessionButton.textContent = '⏹️ No Active Session';
+      endSessionButton.disabled = true;
+      endSessionButton.style.opacity = '0.5';
+    }
+  } catch (error) {
+    console.error('Error updating session info:', error);
+    const endSessionButton = document.getElementById('endCurrentSession');
+    endSessionButton.textContent = '⏹️ End Current Session';
+    endSessionButton.disabled = false;
+    endSessionButton.style.opacity = '1';
   }
 }
 
