@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "CodeStreak Tracker",
+  "description": "Track your coding activity and build streaks like Duolingo for developers",
+  "version": "0.1.0",
+  "permissions": [
+    "tabs",
+    "webNavigation", 
+    "idle",
+    "storage",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://*/",
+    "http://*/"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [{
+    "matches": ["<all_urls>"],
+    "js": ["content.js"],
+    "run_at": "document_idle"
+  }],
+  "action": {
+    "default_popup": "hello.html",
+    "default_icon": "default_icon.png",
+    "default_title": "CodeStreak"
+  },
+  "options_page": "options.html"
+}

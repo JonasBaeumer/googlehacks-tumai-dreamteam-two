@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>CodeStreak Settings</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .section {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .section h3 {
+      margin-top: 0;
+      color: #333;
+    }
+    .toggle {
+      display: flex;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .toggle input[type="checkbox"] {
+      margin-right: 10px;
+    }
+    .button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    .button:hover {
+      background: #0056b3;
+    }
+    .button.danger {
+      background: #dc3545;
+    }
+    .button.danger:hover {
+      background: #c82333;
+    }
+    .status {
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 10px;
+    }
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+    }
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    .coding-sites {
+      max-height: 200px;
+      overflow-y: auto;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 10px;
+    }
+    .site-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 0;
+      border-bottom: 1px solid #eee;
+    }
+    .site-item:last-child {
+      border-bottom: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🔥 CodeStreak Settings</h1>
+    <p>Configure your coding activity tracking</p>
+  </div>
+
+  <div class="section">
+    <h3>Tracking Settings</h3>
+    <div class="toggle">
+      <input type="checkbox" id="enableTracking" checked>
+      <label for="enableTracking">Enable activity tracking</label>
+    </div>
+    <div class="toggle">
+      <input type="checkbox" id="trackAllSites" checked>
+      <label for="trackAllSites">Track all websites (not just coding sites)</label>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>Data Management</h3>
+    <button class="button" id="exportData">Export Data</button>
+    <button class="button danger" id="clearData">Clear All Data</button>
+    <div id="dataStatus"></div>
+  </div>
+
+  <div class="section">
+    <h3>Recognized Coding Sites</h3>
+    <p>These domains are automatically recognized as coding-related:</p>
+    <div class="coding-sites" id="codingSites">
+      <!-- Sites will be populated by JavaScript -->
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>About</h3>
+    <p><strong>CodeStreak v0.1.0</strong></p>
+    <p>Track your coding activity and build streaks like Duolingo for developers!</p>
+    <p>This extension respects your privacy by only tracking URLs, titles, and time spent - no page content is ever accessed or stored.</p>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>
