@@ -648,5 +648,6 @@ async function handleGetCurrentSessionInfo(sendResponse) {
   }
 }
 
+
 // Initialize extension
 console.log("CodeStreak background script loaded");

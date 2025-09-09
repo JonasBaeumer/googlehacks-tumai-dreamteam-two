@@ -1,10 +1,20 @@
 import {onRequest} from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
-import {getAuth as getAdminAuth} from "firebase-admin/auth";
 import {getDb} from "../config/admin";
 import {DailyResponseSchema, DailySchema, Source} from "../schemas";
 
 export const getDaily = onRequest(async (request, response) => {
+  // Set CORS headers
+  response.set('Access-Control-Allow-Origin', '*');
+  response.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  response.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  
+  // Handle preflight requests
+  if (request.method === 'OPTIONS') {
+    response.status(204).send('');
+    return;
+  }
+  
   if (request.method !== "GET") {
     response.status(405).send("Method Not Allowed");
     return;
@@ -12,31 +22,9 @@ export const getDaily = onRequest(async (request, response) => {
 
   const db = getDb();
 
-  // Extract bearer token
-  const authHeader = request.headers.authorization || "";
-  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
-
-  // Allow bypass in emulator for local testing if explicitly requested
-  const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
-  const skipAuth = isEmulator && request.headers["x-skip-auth"] === "true";
-
   try {
-    let uid = "";
-
-    if (skipAuth) {
-      uid = "emulator-test-user";
-    } else if (token.startsWith("mock_token_")) {
-      // Handle mock tokens for testing
-      uid = token.replace("mock_token_", "");
-      logger.info("Using mock token for testing", {uid, token});
-    } else {
-      if (!token) {
-        response.status(401).send("Missing Authorization bearer token");
-        return;
-      }
-      const decoded = await getAdminAuth().verifyIdToken(token);
-      uid = decoded.uid;
-    }
+    // Hardcoded user ID for demo purposes
+    const uid = "anonymous_1757385512613";
 
     // Parse query parameters for date range
     const startDate = request.query.start_date as string;

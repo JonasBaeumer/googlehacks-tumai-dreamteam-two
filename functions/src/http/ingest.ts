@@ -3,6 +3,7 @@ import * as logger from "firebase-functions/logger";
 import {getAuth as getAdminAuth} from "firebase-admin/auth";
 import {getDb} from "../config/admin";
 import {Firestore, FieldValue} from "firebase-admin/firestore";
+import {processSession, SessionData} from "../processors/sessionProcessor";
 
 export const ingest = onRequest(async (request, response) => {
   if (request.method !== "POST") {
@@ -63,30 +64,60 @@ export const ingest = onRequest(async (request, response) => {
         .toISOString().split("T")[0], // YYYY-MM-DD
     };
 
-    // Store the activity session
+    // Store the activity session (legacy format for backward compatibility)
     const sessionRef = await db.collection("users").doc(uid)
       .collection("activity").add(enrichedData);
 
-    // Update user stats
+    // Update user stats (legacy format for backward compatibility)
     await updateUserStats(db, uid, enrichedData);
 
-    // Update session group stats if it exists
+    // Update session group stats if it exists (legacy format for backward compatibility)
     if (activityData.session_group_id) {
       await updateSessionGroupStats(db, uid, activityData);
     }
 
-    logger.info("Activity ingested", {
+    // NEW: Process session with the comprehensive update system
+    const sessionData: SessionData = {
+      uid,
+      duration: activityData.active_ms,
+      start_time: activityData.ts_start,
+      end_time: activityData.ts_end,
+      urls: activityData.session_group_paths || [activityData.url || `https://${activityData.domain}`],
+      session_group_id: activityData.session_group_id,
+      session_group_sites: activityData.session_group_sites,
+      session_group_paths: activityData.session_group_paths,
+      session_group_titles: activityData.session_group_titles,
+    };
+
+    // Process the session with the new comprehensive system
+    const processingResult = await processSession(sessionData);
+
+    logger.info("Activity ingested and processed", {
       uid,
       sessionId: sessionRef.id,
       domain: activityData.domain,
       activeMs: activityData.active_ms,
       sessionGroupId: activityData.session_group_id,
+      processingResult: {
+        isCodingWebsite: processingResult.isCodingWebsite,
+        topics: processingResult.topics,
+        sources: processingResult.sources,
+        xpGained: processingResult.xpResult.total_xp_gained,
+        streakCount: processingResult.streakData.current_streak,
+      },
     });
 
     response.status(200).json({
       ok: true,
       sessionId: sessionRef.id,
       message: "Activity data processed successfully",
+      processing: {
+        isCodingWebsite: processingResult.isCodingWebsite,
+        topics: processingResult.topics,
+        sources: processingResult.sources,
+        xpGained: processingResult.xpResult.total_xp_gained,
+        streakCount: processingResult.streakData.current_streak,
+      },
     });
   } catch (error) {
     logger.error("Activity ingestion failed", {
