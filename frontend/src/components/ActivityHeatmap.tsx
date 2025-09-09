@@ -96,20 +96,35 @@ const ActivityHeatmap = ({ dailyData, isLoading }: ActivityHeatmapProps) => {
   const monthLabels = generateMonthLabels(weeklyData);
   const dataMap = new Map(dailyData?.map(d => [d.date, d]) || []);
 
+  // Calculate relative intensity based on the actual data range
+  const allTimes = dailyData?.map(d => d.total_time_spent) || [];
+  const maxTime = Math.max(...allTimes, 0);
+  const minTime = Math.min(...allTimes.filter(t => t > 0), maxTime);
+  
   const getIntensity = (totalTime: number) => {
     if (totalTime === 0) return 0;
-    if (totalTime < 1800000) return 1; // < 30 min
-    if (totalTime < 3600000) return 2; // < 1 hour
-    if (totalTime < 7200000) return 3; // < 2 hours
-    return 4; // 2+ hours
+    
+    // If there's only one data point or very little variation, make it highly visible
+    if (maxTime === minTime || maxTime === 0) {
+      return totalTime > 0 ? 4 : 0; // Max intensity for any activity
+    }
+    
+    // Calculate relative intensity based on data distribution
+    const range = maxTime - minTime;
+    const normalized = (totalTime - minTime) / range;
+    
+    if (normalized <= 0.25) return 1;
+    if (normalized <= 0.5) return 2;
+    if (normalized <= 0.75) return 3;
+    return 4;
   };
 
   const getIntensityColor = (intensity: number) => {
     const colors = [
       "bg-muted", // 0 - no activity
-      "bg-primary/20", // 1 - light
-      "bg-primary/40", // 2 - medium-light
-      "bg-primary/70", // 3 - medium
+      "bg-primary/30", // 1 - light - made more visible
+      "bg-primary/50", // 2 - medium-light
+      "bg-primary/75", // 3 - medium
       "bg-primary", // 4 - high
     ];
     return colors[intensity];
