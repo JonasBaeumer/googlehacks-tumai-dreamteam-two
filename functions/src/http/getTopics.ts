@@ -5,6 +5,17 @@ import {getDb} from "../config/admin";
 import {TopicsResponseSchema, TopicStatsSchema, Source} from "../schemas";
 
 export const getTopics = onRequest(async (request, response) => {
+  // Set CORS headers
+  response.set('Access-Control-Allow-Origin', '*');
+  response.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  response.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  
+  // Handle preflight requests
+  if (request.method === 'OPTIONS') {
+    response.status(204).send('');
+    return;
+  }
+  
   if (request.method !== "GET") {
     response.status(405).send("Method Not Allowed");
     return;

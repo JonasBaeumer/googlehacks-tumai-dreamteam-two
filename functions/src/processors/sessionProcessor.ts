@@ -108,7 +108,8 @@ export async function processSession(sessionData: SessionData): Promise<Processe
       sessionData.uid,
       sessionData.duration,
       streakData.current_streak,
-      isCodingWebsite
+      isCodingWebsite,
+      date
     );
     
     logger.info("XP processed", { xpResult });

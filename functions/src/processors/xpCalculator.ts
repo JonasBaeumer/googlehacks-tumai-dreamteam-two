@@ -26,7 +26,7 @@ export interface SessionXPResult {
 
 /**
  * Calculates XP for a session based on duration
- * Based on pseudo code: "{xp}_session = ceil(0.0125*(t / 60.000 + 5) ** 2) * 0.1"
+ * Modified formula to ensure even short sessions get XP
  * @param durationMs Session duration in milliseconds
  * @returns Calculated session XP
  */
@@ -34,11 +34,18 @@ export function calculateSessionXP(durationMs: number): number {
   // Convert milliseconds to minutes
   const durationMinutes = durationMs / (1000 * 60);
   
-  // Apply the formula from pseudo code: ceil(0.0125*(t / 60.000 + 5) ** 2) * 0.1
-  const baseXP = Math.ceil(0.0125 * Math.pow(durationMinutes + 5, 2)) * 0.1;
+  // Modified formula: Use a simpler calculation that gives XP even for short sessions
+  // Original: ceil(0.0125*(t / 60.000 + 5) ** 2) * 0.1
+  // New: Give 1 XP per minute, minimum 1 XP for any session
+  const baseXP = Math.max(1, Math.round(durationMinutes));
   
-  // Round to nearest integer
-  return Math.round(baseXP);
+  logger.info("Session XP calculation", {
+    durationMs,
+    durationMinutes,
+    baseXP
+  });
+  
+  return baseXP;
 }
 
 /**
@@ -208,13 +215,15 @@ export async function getXP(uid: string): Promise<XPData> {
  * @param sessionDuration Session duration in milliseconds
  * @param streakCount Current streak count
  * @param isCodingWebsite Whether this session includes coding websites
+ * @param date Date string in YYYY-MM-DD format for daily XP update
  * @returns Promise resolving to XP calculation result
  */
 export async function processSessionXP(
   uid: string,
   sessionDuration: number,
   streakCount: number,
-  isCodingWebsite: boolean
+  isCodingWebsite: boolean,
+  date?: string
 ): Promise<SessionXPResult> {
   try {
     // Calculate session XP
@@ -226,6 +235,11 @@ export async function processSessionXP(
     // Update XP in database
     if (isCodingWebsite) {
       await updateXP(uid, sessionXP, streakXP, isCodingWebsite);
+      
+      // Update daily XP if date is provided
+      if (date) {
+        await updateDailyXP(uid, date, sessionXP);
+      }
     }
     
     const result: SessionXPResult = {
@@ -239,6 +253,7 @@ export async function processSessionXP(
       sessionDuration,
       streakCount,
       isCodingWebsite,
+      date,
       result
     });
     
@@ -249,6 +264,7 @@ export async function processSessionXP(
       sessionDuration,
       streakCount,
       isCodingWebsite,
+      date,
       error: (error as Error).message
     });
     throw error;
