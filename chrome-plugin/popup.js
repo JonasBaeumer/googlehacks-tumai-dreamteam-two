@@ -269,6 +269,7 @@ async function updateSessionInfo() {
   }
 }
 
+
 // Listen for messages from background script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'statsUpdated') {
