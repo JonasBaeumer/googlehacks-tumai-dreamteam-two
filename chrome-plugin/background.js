@@ -56,7 +56,7 @@ chrome.idle.onStateChanged.addListener(state => {
 });
 
 // Handle activity pings from content scripts
-chrome.runtime.onMessage.addListener((msg, sender) => {
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === "activity" && sender.tab) {
     // Record activity for session group tracking
     recordActivity();
@@ -65,6 +65,38 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
     const session = ensureSession(sender.tab.id, sender.tab);
     session.lastUserPing = Date.now();
     session.lastActivity = msg.reason;
+  } else if (msg.type === "getAuthStatus") {
+    // Return current auth status from storage
+    chrome.storage.local.get({ authState: null }, ({ authState }) => {
+      const status = authState || {
+        isAuthenticated: false,
+        isAnonymous: false,
+        userId: null
+      };
+      console.log('Returning auth status:', status);
+      sendResponse(status);
+    });
+    return true; // Keep message channel open for async response
+  } else if (msg.type === "signInAnonymously") {
+    // Handle anonymous sign-in
+    handleAnonymousSignIn(sendResponse);
+    return true; // Keep message channel open for async response
+  } else if (msg.type === "pairWithCode") {
+    // Handle pairing with code
+    handlePairingCode(msg.code, sendResponse);
+    return true; // Keep message channel open for async response
+  } else if (msg.type === "testDatabase") {
+    // Handle test database entry
+    handleTestDatabase(sendResponse);
+    return true; // Keep message channel open for async response
+  } else if (msg.type === "endCurrentSession") {
+    // Handle manual session ending
+    handleEndCurrentSession(sendResponse);
+    return true; // Keep message channel open for async response
+  } else if (msg.type === "getCurrentSessionInfo") {
+    // Handle getting current session info
+    handleGetCurrentSessionInfo(sendResponse);
+    return true; // Keep message channel open for async response
   }
 });
 
@@ -110,6 +142,9 @@ function startSession(tabId, tab) {
   // Add site to session group
   addSiteToSessionGroup(url.hostname);
   
+  // Add full URL and title to session group
+  addPathAndTitleToSessionGroup(session.url, session.title);
+  
   console.log("Started session for:", tab.url, "Group:", ACTIVE_SESSION_GROUP);
 }
 
@@ -150,11 +185,15 @@ function tickActive() {
     
     const session = SESSIONS.get(activeTabId);
     const windowFocused = (tab.windowId === focusedWindowId);
-    const userActive = (Date.now() - session.lastUserPing) <= INTERACTION_TTL_MS;
+    
+    // For now, assume user is active if tab is active and window is focused
+    // In the future, we can add content script pings for more accurate tracking
+    const userActive = true; // Simplified for now - always assume active if tab is focused
     const isActive = tab.active && windowFocused && idleState === "active" && userActive;
     
     if (isActive) {
       session.activeMs += ACTIVE_TICK_MS;
+      console.log(`Activity tick: +${ACTIVE_TICK_MS}ms, total: ${session.activeMs}ms`);
     }
   });
 }
@@ -162,6 +201,8 @@ function tickActive() {
 function serializeSession(session, reason) {
   const group = SESSION_GROUPS.get(session.sessionGroupId);
   const groupSites = group ? group.sites : [];
+  const groupPaths = group ? group.paths : [];
+  const groupTitles = group ? group.titles : [];
   const groupDuration = group ? group.totalDuration : 0;
   
   return {
@@ -177,6 +218,8 @@ function serializeSession(session, reason) {
     session_group_id: session.sessionGroupId,
     session_group_duration: groupDuration,
     session_group_sites: groupSites,
+    session_group_paths: groupPaths,
+    session_group_titles: groupTitles,
     session_group_position: group ? group.sessionCount + 1 : 1
   };
 }
@@ -185,13 +228,33 @@ async function sendEvent(payload, reason) {
   try {
     console.log("Sending event:", payload);
     
-    // For now, just log the data. We'll add Firebase integration next
-    // TODO: Replace with actual Firebase endpoint
-    const response = await fetch("https://your-firebase-endpoint.com/ingest", {
+    // Get auth state from storage
+    const { authState } = await chrome.storage.local.get({ authState: null });
+    
+    if (!authState || !authState.isAuthenticated) {
+      console.warn("No authenticated user, queueing for later");
+      queueOffline(payload);
+      return;
+    }
+    
+    // Get ID token from storage (stored by auth manager)
+    const { idToken } = await chrome.storage.local.get({ idToken: null });
+    
+    if (!idToken) {
+      console.warn("No ID token available, queueing for later");
+      queueOffline(payload);
+      return;
+    }
+    
+    console.log("Sending activity data to Firebase with authentication...");
+    console.log("Using ID token:", idToken);
+    
+    // Send to real Firebase endpoint with authentication
+    const response = await fetch("https://us-central1-tum-cdtm25mun-8774.cloudfunctions.net/ingest", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        // "Authorization": `Bearer ${idToken}` // Will add when we set up Firebase Auth
+        "Authorization": `Bearer ${idToken}`
       },
       body: JSON.stringify(payload)
     });
@@ -268,6 +331,8 @@ function startNewSessionGroup() {
     start: Date.now(),
     lastActivity: Date.now(),
     sites: [],
+    paths: [],
+    titles: [],
     totalDuration: 0,
     sessionCount: 0
   });
@@ -351,4 +416,237 @@ function addSiteToSessionGroup(domain) {
   }
 }
 
+function addPathAndTitleToSessionGroup(url, title) {
+  if (!ACTIVE_SESSION_GROUP) return;
+  
+  const group = SESSION_GROUPS.get(ACTIVE_SESSION_GROUP);
+  if (group) {
+    // Add full URL if not already present
+    if (!group.paths.includes(url)) {
+      group.paths.push(url);
+    }
+    
+    // Add title if not already present
+    if (!group.titles.includes(title)) {
+      group.titles.push(title);
+    }
+    
+    console.log("Added URL and title to session group:", url, title);
+    console.log("Session group URLs:", group.paths);
+    console.log("Session group titles:", group.titles);
+  }
+}
+
+async function handleAnonymousSignIn(sendResponse) {
+  try {
+    console.log("Handling anonymous sign-in");
+    
+    // For now, simulate anonymous authentication
+    // In a real implementation, you'd use Firebase Admin SDK or a different approach
+    const mockUserId = 'anonymous_' + Date.now();
+    
+    const authState = {
+      isAuthenticated: true,
+      isAnonymous: true,
+      userId: mockUserId,
+      email: null,
+      lastUpdated: new Date().toISOString()
+    };
+    
+    await chrome.storage.local.set({ authState });
+    
+    // Generate a mock ID token (in real implementation, this would come from Firebase)
+    const mockIdToken = 'mock_token_' + mockUserId;
+    await chrome.storage.local.set({ idToken: mockIdToken });
+    
+    console.log('Anonymous sign-in successful:', mockUserId);
+    console.log('Stored mock ID token:', mockIdToken);
+    sendResponse({ success: true, userId: mockUserId });
+  } catch (error) {
+    console.error("Anonymous sign-in failed:", error);
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+async function handlePairingCode(code, sendResponse) {
+  try {
+    console.log("Handling pairing code:", code);
+    
+    // Call the claimCode function
+    const response = await fetch('https://us-central1-tum-cdtm25mun-8774.cloudfunctions.net/claimCode', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ code: code })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP ${response.status}`);
+    }
+
+    const { customToken } = await response.json();
+    
+    // For now, simulate signing in with custom token
+    // In a real implementation, you'd use Firebase Admin SDK
+    const mockUserId = 'user_' + Date.now();
+    
+    const authState = {
+      isAuthenticated: true,
+      isAnonymous: false,
+      userId: mockUserId,
+      email: null,
+      lastUpdated: new Date().toISOString()
+    };
+    
+    await chrome.storage.local.set({ 
+      authState,
+      customToken: customToken,
+      pairedAt: new Date().toISOString(),
+      pairingCode: code
+    });
+    
+    // Generate a mock ID token (in real implementation, this would come from Firebase)
+    const mockIdToken = 'mock_token_' + mockUserId;
+    await chrome.storage.local.set({ idToken: mockIdToken });
+    
+    console.log('Pairing successful:', mockUserId);
+    sendResponse({ success: true, userId: mockUserId });
+  } catch (error) {
+    console.error("Pairing failed:", error);
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+async function handleTestDatabase(sendResponse) {
+  try {
+    console.log("Creating test database entry...");
+    
+    // Get current auth state
+    const { authState, idToken } = await chrome.storage.local.get({ 
+      authState: null, 
+      idToken: null 
+    });
+    
+    if (!authState || !authState.isAuthenticated) {
+      throw new Error("Not authenticated. Please sign in first.");
+    }
+    
+    // Create test activity data
+    const testData = {
+      active_ms: 10000, // 10 seconds
+      domain: "test.com",
+      url: "https://test.com/test-page",
+      title: "Test Page - Database Connection Test",
+      path: "/test-page",
+      ts_start: new Date(Date.now() - 10000).toISOString(), // 10 seconds ago
+      ts_end: new Date().toISOString(),
+      session_group_id: "test-group-" + Date.now(),
+      session_group_position: 1,
+      session_group_duration: 10000,
+      session_group_sites: ["test.com"],
+      session_group_paths: ["https://test.com/test-page"],
+      session_group_titles: ["Test Page - Database Connection Test"]
+    };
+    
+    console.log("Sending test data:", testData);
+    
+    // Send to Firebase
+    const response = await fetch('https://us-central1-tum-cdtm25mun-8774.cloudfunctions.net/ingest', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${idToken}`
+      },
+      body: JSON.stringify(testData)
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP ${response.status}`);
+    }
+    
+    const result = await response.json();
+    console.log('Test entry created successfully:', result);
+    sendResponse({ success: true, sessionId: result.sessionId });
+    
+  } catch (error) {
+    console.error("Test database entry failed:", error);
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+async function handleEndCurrentSession(sendResponse) {
+  try {
+    console.log("Manually ending current session...");
+    
+    // Get the current active tab
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab) {
+      throw new Error("No active tab found");
+    }
+    
+    // Check if there's an active session for this tab
+    const session = SESSIONS.get(tab.id);
+    if (!session) {
+      throw new Error("No active session found for current tab");
+    }
+    
+    // End the session manually
+    endSession(tab.id, "manual_end");
+    
+    const message = `Session ended manually. Active time: ${Math.round(session.activeMs / 1000)}s on ${session.domain}`;
+    console.log(message);
+    
+    sendResponse({ 
+      success: true, 
+      message: message,
+      sessionData: {
+        domain: session.domain,
+        activeMs: session.activeMs,
+        duration: Math.round(session.activeMs / 1000) + 's'
+      }
+    });
+    
+  } catch (error) {
+    console.error("Failed to end current session:", error);
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+async function handleGetCurrentSessionInfo(sendResponse) {
+  try {
+    // Get the current active tab
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab) {
+      sendResponse({ hasActiveSession: false });
+      return;
+    }
+    
+    // Check if there's an active session for this tab
+    const session = SESSIONS.get(tab.id);
+    if (!session) {
+      sendResponse({ hasActiveSession: false });
+      return;
+    }
+    
+    sendResponse({
+      hasActiveSession: true,
+      activeMs: session.activeMs,
+      domain: session.domain,
+      url: session.url,
+      title: session.title,
+      sessionGroupId: session.sessionGroupId,
+      startTime: session.start,
+      lastActivity: session.lastActivity
+    });
+    
+  } catch (error) {
+    console.error("Failed to get current session info:", error);
+    sendResponse({ hasActiveSession: false, error: error.message });
+  }
+}
+
+// Initialize extension
 console.log("CodeStreak background script loaded");

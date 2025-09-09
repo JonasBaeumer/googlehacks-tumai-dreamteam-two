@@ -1,0 +1,12 @@
+{
+  "projects": {
+    "default": "tum-cdtm25mun-8774"
+  },
+  "targets": {},
+  "etags": {
+    "tum-cdtm25mun-8774": {
+      "extensionInstances": {}
+    }
+  },
+  "dataconnectEmulatorConfig": {}
+}

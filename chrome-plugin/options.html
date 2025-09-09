@@ -82,6 +82,22 @@
     .site-item:last-child {
       border-bottom: none;
     }
+    .status {
+      padding: 8px 12px;
+      border-radius: 4px;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
   </style>
 </head>
 <body>
@@ -100,6 +116,16 @@
       <input type="checkbox" id="trackAllSites" checked>
       <label for="trackAllSites">Track all websites (not just coding sites)</label>
     </div>
+  </div>
+
+  <div class="section">
+    <h3>Account Connection</h3>
+    <p>Connect your extension to your CodeStreak account to sync data across devices.</p>
+    <div style="margin-bottom: 15px;">
+      <input type="text" id="pairingCode" placeholder="Enter 6-character pairing code" maxlength="6" style="padding: 8px; margin-right: 10px; border: 1px solid #ddd; border-radius: 4px;">
+      <button class="button" id="pairExtension">Connect Extension</button>
+    </div>
+    <div id="pairingStatus"></div>
   </div>
 
   <div class="section">
@@ -124,6 +150,7 @@
     <p>This extension respects your privacy by only tracking URLs, titles, and time spent - no page content is ever accessed or stored.</p>
   </div>
 
+  <!-- Extension Scripts -->
   <script src="options.js"></script>
 </body>
 </html>

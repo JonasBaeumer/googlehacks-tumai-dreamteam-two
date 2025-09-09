@@ -1,0 +1,30 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users can read/write their own data
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // Activity data
+      match /activity/{activityId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      // User stats
+      match /stats/{statId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      // Session groups
+      match /session_groups/{groupId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+    
+    // Pairing codes are managed by Cloud Functions only
+    match /pairing_codes/{codeId} {
+      allow read, write: if false; // Only Cloud Functions can access
+    }
+  }
+}
