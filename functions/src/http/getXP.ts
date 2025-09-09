@@ -26,19 +26,38 @@ export const getXP = onRequest(async (request, response) => {
     // Hardcoded user ID for demo purposes
     const uid = "anonymous_1757385512613";
 
-    // Get all user data to calculate XP
+    // Get all user data to calculate XP from the correct collections
     const [sessionsSnapshot, dailyStatsSnapshot, githubSessionsSnapshot] = await Promise.all([
-      db.collection("users").doc(uid).collection("activity").get(),
-      db.collection("users").doc(uid).collection("stats").get(),
-      db.collection("users").doc(uid).collection("activity")
-        .where("domain", "==", "github.com").get(),
+      db.collection("users").doc(uid).collection("sessions").get(),
+      db.collection("users").doc(uid).collection("daily_stats").get(),
+      db.collection("users").doc(uid).collection("sessions")
+        .where("sources", "array-contains", "github").get(),
     ]);
+
+    // Basic logging to see what collections exist
+    logger.info("Collection counts", {
+      uid,
+      sessionsCount: sessionsSnapshot.docs.length,
+      dailyStatsCount: dailyStatsSnapshot.docs.length,
+      githubSessionsCount: githubSessionsSnapshot.docs.length
+    });
+
+    // Log sample session data if any exists
+    if (sessionsSnapshot.docs.length > 0) {
+      const sampleSession = sessionsSnapshot.docs[0].data();
+      logger.info("Sample session data", {
+        sessionId: sessionsSnapshot.docs[0].id,
+        sampleData: sampleSession
+      });
+    } else {
+      logger.info("No sessions found for user", { uid });
+    }
 
     // Calculate session XP (based on total time spent)
     let sessionXP = 0;
     sessionsSnapshot.docs.forEach(doc => {
       const data = doc.data();
-      const duration = data.active_ms || 0;
+      const duration = data.duration || 0; // Use 'duration' field from sessions collection
       // 1 XP per minute of coding
       sessionXP += Math.floor(duration / 60000);
     });
@@ -52,11 +71,10 @@ export const getXP = onRequest(async (request, response) => {
     let githubXP = 0;
     githubSessionsSnapshot.docs.forEach(doc => {
       const data = doc.data();
-      const path = data.path?.toLowerCase() || "";
-      const title = data.title?.toLowerCase() || "";
+      const topics = data.topics || [];
       
-      // 50 XP per commit
-      if (path.includes("/commit/") || title.includes("commit")) {
+      // 50 XP per commit (if topics include version-control)
+      if (topics.includes("version-control")) {
         githubXP += 50;
       }
       // 10 XP per GitHub session
@@ -67,8 +85,8 @@ export const getXP = onRequest(async (request, response) => {
     const topics = new Set<string>();
     sessionsSnapshot.docs.forEach(doc => {
       const data = doc.data();
-      const extractedTopics = extractTopicsFromData(data);
-      extractedTopics.forEach(topic => topics.add(topic));
+      const sessionTopics = data.topics || [];
+      sessionTopics.forEach((topic: string) => topics.add(topic));
     });
     const topicXP = topics.size * 25; // 25 XP per unique topic
 
@@ -76,7 +94,7 @@ export const getXP = onRequest(async (request, response) => {
     let streamXP = 0;
     sessionsSnapshot.docs.forEach(doc => {
       const data = doc.data();
-      const duration = data.active_ms || 0;
+      const duration = data.duration || 0;
       const minutes = duration / 60000;
       
       // Bonus XP for long sessions
@@ -87,6 +105,21 @@ export const getXP = onRequest(async (request, response) => {
 
     // Calculate total XP
     const totalXP = sessionXP + dailyXP + githubXP + topicXP + streamXP;
+
+    // Debug logging
+    logger.info("XP Calculation Debug", {
+      uid,
+      sessionsCount: sessionsSnapshot.docs.length,
+      dailyStatsCount: dailyStatsSnapshot.docs.length,
+      githubSessionsCount: githubSessionsSnapshot.docs.length,
+      sessionXP,
+      dailyXP,
+      githubXP,
+      topicXP,
+      streamXP,
+      totalXP,
+      topics: Array.from(topics)
+    });
 
     const xpData = {
       total_xp: totalXP,
@@ -118,36 +151,4 @@ export const getXP = onRequest(async (request, response) => {
   }
 });
 
-/**
- * Extracts topics from session data
- */
-function extractTopicsFromData(data: any): string[] {
-  const topics: string[] = [];
-  
-  const domain = data.domain?.toLowerCase() || "";
-  const path = data.path?.toLowerCase() || "";
-  
-  if (domain.includes("leetcode") || path.includes("problem")) {
-    topics.push("algorithms");
-  }
-  if (domain.includes("github") || path.includes("pull") || path.includes("commit")) {
-    topics.push("version-control");
-  }
-  if (domain.includes("stackoverflow") || path.includes("question")) {
-    topics.push("problem-solving");
-  }
-  if (path.includes("docs") || path.includes("documentation")) {
-    topics.push("documentation");
-  }
-  if (domain.includes("react") || path.includes("react")) {
-    topics.push("react");
-  }
-  if (domain.includes("javascript") || path.includes("js")) {
-    topics.push("javascript");
-  }
-  if (domain.includes("python") || path.includes("python")) {
-    topics.push("python");
-  }
-  
-  return topics;
-}
+
