@@ -24,7 +24,7 @@ export const getSessions = onRequest(async (request, response) => {
 
   try {
     // Hardcoded user ID for demo purposes
-    const uid = "anonymous_1757385512613";
+    const uid = "anonymous_1757418697421";
 
     // Parse query parameters
     const page = parseInt(request.query.page as string) || 1;

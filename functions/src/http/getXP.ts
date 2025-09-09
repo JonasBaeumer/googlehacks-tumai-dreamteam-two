@@ -24,7 +24,7 @@ export const getXP = onRequest(async (request, response) => {
 
   try {
     // Hardcoded user ID for demo purposes
-    const uid = "anonymous_1757385512613";
+    const uid = "anonymous_1757418697421";
 
     // Get all user data to calculate XP from the correct collections
     const [sessionsSnapshot, dailyStatsSnapshot, githubSessionsSnapshot] = await Promise.all([

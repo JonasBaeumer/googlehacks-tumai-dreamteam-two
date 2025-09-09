@@ -24,7 +24,7 @@ export const getTopics = onRequest(async (request, response) => {
 
   try {
     // Hardcoded user ID for demo purposes
-    const uid = "anonymous_1757385512613";
+    const uid = "anonymous_1757418697421";
 
     // Get all sessions to analyze topics
     const sessionsSnapshot = await db
