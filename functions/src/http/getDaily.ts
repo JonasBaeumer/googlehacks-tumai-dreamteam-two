@@ -24,7 +24,7 @@ export const getDaily = onRequest(async (request, response) => {
 
   try {
     // Hardcoded user ID for demo purposes
-    const uid = "anonymous_1757385512613";
+    const uid = "anonymous_1757418697421";
 
     // Parse query parameters for date range
     const startDate = request.query.start_date as string;

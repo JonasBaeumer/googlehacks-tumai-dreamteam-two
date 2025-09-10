@@ -17,12 +17,24 @@ import {
 
 // API URLs with CORS enabled
 const API_ENDPOINTS = {
-  sessions: "https://getsessionsdemo-vkb4ye2sla-uc.a.run.app",
-  topics: "https://gettopicsdemo-vkb4ye2sla-uc.a.run.app", 
-  daily: "https://getdailydemo-vkb4ye2sla-uc.a.run.app",
-  github: "https://getgithubdemo-vkb4ye2sla-uc.a.run.app",
-  xp: "https://getxpdemo-vkb4ye2sla-uc.a.run.app"
+  demo: {
+    sessions: "https://getsessionsdemo-vkb4ye2sla-uc.a.run.app",
+    topics: "https://gettopicsdemo-vkb4ye2sla-uc.a.run.app", 
+    daily: "https://getdailydemo-vkb4ye2sla-uc.a.run.app",
+    github: "https://getgithubdemo-vkb4ye2sla-uc.a.run.app",
+    xp: "https://getxpdemo-vkb4ye2sla-uc.a.run.app"
+  },
+  live: {
+    sessions: "https://getsessions-vkb4ye2sla-uc.a.run.app",
+    topics: "https://gettopics-vkb4ye2sla-uc.a.run.app",
+    daily: "https://getdaily-vkb4ye2sla-uc.a.run.app",
+    github: "https://getgithub-vkb4ye2sla-uc.a.run.app",
+    xp: "https://getxp-vkb4ye2sla-uc.a.run.app"
+  }
 };
+
+// Get endpoints based on user type
+export const getEndpoints = (userType: 'demo' | 'live' = 'demo') => API_ENDPOINTS[userType];
 
 // Generic fetch wrapper with error handling
 async function apiCall<T>(url: string, schema: any, endpointName: string): Promise<T | null> {
@@ -53,86 +65,93 @@ async function apiCall<T>(url: string, schema: any, endpointName: string): Promi
   }
 }
 
-// API endpoints
-export const api = {
-  async getSessions(page = 1, limit = 10): Promise<SessionsResponse | null> {
-    const url = `${API_ENDPOINTS.sessions}?page=${page}&limit=${limit}`;
-    const result = await apiCall<any>(url, z.any(), "sessions");
-    if (!result) return null;
-    
-    // Transform API response to match our schema
-    const transformed = {
-      data: result.sessions || [],
-      page: result.page || page,
-      limit: result.limit || limit,
-      total: result.total
-    };
-    
-    return SessionsResponseSchema.parse(transformed);
-  },
+// API endpoints with dynamic user type support
+export const createApi = (userType: 'demo' | 'live' = 'demo') => {
+  const endpoints = getEndpoints(userType);
+  
+  return {
+    async getSessions(page = 1, limit = 10): Promise<SessionsResponse | null> {
+      const url = `${endpoints.sessions}?page=${page}&limit=${limit}`;
+      const result = await apiCall<any>(url, z.any(), "sessions");
+      if (!result) return null;
+      
+      // Transform API response to match our schema
+      const transformed = {
+        data: result.sessions || [],
+        page: result.page || page,
+        limit: result.limit || limit,
+        total: result.total
+      };
+      
+      return SessionsResponseSchema.parse(transformed);
+    },
 
-  async getTopics(): Promise<TopicStats[] | null> {
-    const result = await apiCall<any>(API_ENDPOINTS.topics, z.any(), "topics");
-    if (!result || !result.topics) return null;
-    
-    // Transform object to array format
-    const topicsArray = Object.entries(result.topics).map(([topic, stats]: [string, any]) => ({
-      topic,
-      session_per_topic: stats.session_per_topic,
-      total_time_spent: stats.total_time_spent,
-      sources: stats.sources || [],
-      average_activity: stats.average_activity,
-      average_session_length: stats.average_session_length
-    }));
-    
-    return TopicsResponseSchema.parse(topicsArray);
-  },
+    async getTopics(): Promise<TopicStats[] | null> {
+      const result = await apiCall<any>(endpoints.topics, z.any(), "topics");
+      if (!result || !result.topics) return null;
+      
+      // Transform object to array format
+      const topicsArray = Object.entries(result.topics).map(([topic, stats]: [string, any]) => ({
+        topic,
+        session_per_topic: stats.session_per_topic,
+        total_time_spent: stats.total_time_spent,
+        sources: stats.sources || [],
+        average_activity: stats.average_activity,
+        average_session_length: stats.average_session_length
+      }));
+      
+      return TopicsResponseSchema.parse(topicsArray);
+    },
 
-  async getDaily(): Promise<Daily[] | null> {
-    const result = await apiCall<any>(API_ENDPOINTS.daily, z.any(), "daily");
-    if (!result || !result.daily_stats) return null;
-    
-    // Transform object to array format
-    const dailyArray = Object.entries(result.daily_stats).map(([date, stats]: [string, any]) => ({
-      date,
-      number_of_sessions: stats.number_of_sessions,
-      total_time_spent: stats.total_time_spent,
-      topics_on_that_day: stats.topics_on_that_day || [],
-      avg_session_length: stats.avg_session_length,
-      list_of_sources: stats.list_of_sources || []
-    }));
-    
-    return DailyResponseSchema.parse(dailyArray);
-  },
+    async getDaily(): Promise<Daily[] | null> {
+      const result = await apiCall<any>(endpoints.daily, z.any(), "daily");
+      if (!result || !result.daily_stats) return null;
+      
+      // Transform object to array format
+      const dailyArray = Object.entries(result.daily_stats).map(([date, stats]: [string, any]) => ({
+        date,
+        number_of_sessions: stats.number_of_sessions,
+        total_time_spent: stats.total_time_spent,
+        topics_on_that_day: stats.topics_on_that_day || [],
+        avg_session_length: stats.avg_session_length,
+        list_of_sources: stats.list_of_sources || []
+      }));
+      
+      return DailyResponseSchema.parse(dailyArray);
+    },
 
-  async getGithub(): Promise<Github | null> {
-    const result = await apiCall<any>(API_ENDPOINTS.github, z.any(), "github");
-    if (!result || !result.github_stats) return null;
-    
-    const githubStats = result.github_stats;
-    
-    // Normalize 'langugages_used' typo to 'languages_used'
-    if (githubStats.langugages_used && !githubStats.languages_used) {
-      githubStats.languages_used = githubStats.langugages_used;
-      delete githubStats.langugages_used;
-    }
-    
-    const transformed = {
-      number_of_commits: githubStats.number_of_commits,
-      lines_of_code: githubStats.lines_of_code,
-      languages_used: githubStats.languages_used || []
-    };
-    
-    return GithubSchema.parse(transformed);
-  },
+    async getGithub(): Promise<Github | null> {
+      const result = await apiCall<any>(endpoints.github, z.any(), "github");
+      if (!result || !result.github_stats) return null;
+      
+      const githubStats = result.github_stats;
+      
+      // Normalize 'langugages_used' typo to 'languages_used'
+      if (githubStats.langugages_used && !githubStats.languages_used) {
+        githubStats.languages_used = githubStats.langugages_used;
+        delete githubStats.langugages_used;
+      }
+      
+      const transformed = {
+        number_of_commits: githubStats.number_of_commits,
+        lines_of_code: githubStats.lines_of_code,
+        languages_used: githubStats.languages_used || []
+      };
+      
+      return GithubSchema.parse(transformed);
+    },
 
-  async getXP(): Promise<XP | null> {
-    const result = await apiCall<any>(API_ENDPOINTS.xp, z.any(), "xp");
-    if (!result || !result.xp) return null;
-    
-    return XPSchema.parse(result.xp);
-  },
+    async getXP(): Promise<XP | null> {
+      const result = await apiCall<any>(endpoints.xp, z.any(), "xp");
+      if (!result || !result.xp) return null;
+      
+      return XPSchema.parse(result.xp);
+    },
+  };
 };
+
+// Default API instance for backward compatibility
+export const api = createApi('demo');
 
 // Derived data calculations
 export function calculateStreaks(dailyData: Daily[]): Streak {

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { api, calculateStreaks, calculateXPProgress } from "@/lib/api";
+import { createApi, calculateStreaks, calculateXPProgress } from "@/lib/api";
 import { type Session, type TopicStats, type Daily, type Github, type XP, type Streak } from "@/lib/schemas";
+import { useUser } from "@/contexts/UserContext";
 
 // Components
 import Navbar from "@/components/Navbar";
@@ -23,12 +24,16 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   const { toast } = useToast();
+  const { userType } = useUser();
 
   // Fetch all data
   useEffect(() => {
     const fetchData = async () => {
-      console.log("🚀 Starting data fetch...");
+      console.log(`🚀 Starting data fetch for ${userType} user...`);
       setIsLoading(true);
+      
+      // Create API instance based on user type
+      const api = createApi(userType);
       
       try {
         console.log("📡 Making API calls...");
@@ -67,7 +72,7 @@ const Dashboard = () => {
         // Show success message if we have data
         if (sessionsResponse || topicsResponse || dailyResponse || githubResponse || xpResponse) {
           toast({
-            title: "Data loaded successfully",
+            title: `${userType === 'demo' ? 'Demo' : 'Live'} data loaded successfully`,
             description: "Your coding activity has been updated.",
           });
         } else {
@@ -87,7 +92,7 @@ const Dashboard = () => {
     };
 
     fetchData();
-  }, [toast]);
+  }, [toast, userType]); // Add userType as dependency
 
   // Calculate current level from XP
   const currentLevel = xpData ? calculateXPProgress(xpData.total_xp).currentTier : null;

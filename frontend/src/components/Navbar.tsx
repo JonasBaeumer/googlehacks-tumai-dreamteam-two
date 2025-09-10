@@ -1,11 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Code2, User, Chrome, LogIn, Sun, Moon } from "lucide-react";
+import { Code2, User, Chrome, LogIn, Sun, Moon, ToggleLeft, ToggleRight } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useUser } from "@/contexts/UserContext";
 
 const Navbar = () => {
   const { theme, setTheme } = useTheme();
+  const { userType, toggleUserType } = useUser();
 
   return (
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
@@ -26,11 +28,12 @@ const Navbar = () => {
             </div>
           </div>
 
-          {/* Center - Simulated User Chip */}
+          {/* Center - User Type Toggle */}
           <div className="flex-1 flex justify-center">
             <Badge 
               variant="outline" 
-              className="flex items-center gap-2 px-3 py-1 text-sm border-primary/20 bg-primary/5"
+              className="flex items-center gap-2 px-3 py-1 text-sm border-primary/20 bg-primary/5 cursor-pointer hover:bg-primary/10 transition-colors"
+              onClick={toggleUserType}
             >
               <Avatar className="h-6 w-6">
                 <AvatarImage src="/api/placeholder/32/32" />
@@ -38,8 +41,17 @@ const Navbar = () => {
                   <User className="h-3 w-3" />
                 </AvatarFallback>
               </Avatar>
-              <span className="font-medium">Demo User</span>
-              <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
+              <span className="font-medium">
+                {userType === 'demo' ? 'Demo User' : 'Live User'}
+              </span>
+              {userType === 'demo' ? (
+                <ToggleLeft className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ToggleRight className="h-4 w-4 text-primary" />
+              )}
+              <div className={`w-2 h-2 rounded-full animate-pulse ${
+                userType === 'demo' ? 'bg-orange-500' : 'bg-success'
+              }`}></div>
             </Badge>
           </div>
 
